@@ -1,5 +1,5 @@
 import requests,json
-API_KEY = "AIzaSyAIG3_7AMrj4_uKaiISpgx14K4UWY6MkPk"
+
 CHANNEL_HANDLE = "MrBeast"
 max_results = 50
 import os 
