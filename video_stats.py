@@ -4,6 +4,7 @@ CHANNEL_HANDLE = "MrBeast"
 max_results = 50
 import os 
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv(dotenv_path="./.env")
 
@@ -43,8 +44,61 @@ def get_video_ids(playlist_id):
     except requests.exceptions.RequestException as e:
         raise e
 
+def extract_video_data(video_ids):
+    extracted_data = []
+
+    def batch_list(video_id_list, batch_size):
+        for i in range(0, len(video_id_list), batch_size):
+            yield video_id_list[i:i + batch_size]
+
+    try:
+        for batch in batch_list(video_ids, max_results):
+            video_ids_str = ','.join(batch)
+
+            url = f"https://youtube.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id={video_ids_str}&key={API_KEY}"
+
+            response = requests.get(url)
+            response.raise_for_status()
+
+            data = response.json()
+
+            for item in data.get('items', []):
+
+                snippet = item['snippet']
+                contentDetails = item['contentDetails']
+                statistics = item['statistics']
+
+                video_data = {
+                    "video_id": item['id'],
+                    "title": snippet['title'],
+                    "publishedAt": snippet['publishedAt'],
+                    "duration": contentDetails['duration'],
+                    "viewCount": statistics.get('viewCount'),
+                    "likeCount": statistics.get('likeCount'),
+                    "commentCount": statistics.get('commentCount')
+                }
+
+                extracted_data.append(video_data)
+
+        return extracted_data
+
+    except requests.exceptions.RequestException as e:
+        raise e
+
+def save_to_json(extracted_data):
+    today = datetime.today().strftime("%Y-%m-%d")
+    os.makedirs("data", exist_ok=True)  # create folder if not exists
+
+    file_path = f"./data/YT_data_{today}.json"
+
+    with open(file_path, 'w', encoding="utf-8") as json_outfile:
+        json.dump(extracted_data, json_outfile, indent=4, ensure_ascii=False)
+
+
 if __name__ == "__main__":
     playlist_id = get_playlist_id() 
-    get_video_ids(playlist_id)
+    video_ids = get_video_ids(playlist_id)
+    video_data = extract_video_data(video_ids)
+    save_to_json(video_data)
 
 
