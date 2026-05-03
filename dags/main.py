@@ -57,6 +57,7 @@ with DAG(
 
     # Define dependencies
     playlist_id >> video_ids >> extract_data >> save_to_json_task >> trigger_update_db
+
 # DAG 2: update_db
 with DAG(
     dag_id="update_db",
@@ -77,3 +78,20 @@ with DAG(
 
     # Define dependencies
     update_staging >> update_core >> trigger_data_quality
+
+
+# DAG 3: data_quality
+with DAG(
+    dag_id="data_quality",
+    default_args=default_args,
+    description="DAG to check the data quality on both layers in the database",
+    catchup=False,
+    schedule=None,
+) as dag_quality:
+
+    # Define tasks
+    soda_validate_staging = yt_elt_data_quality(staging_schema)
+    soda_validate_core = yt_elt_data_quality(core_schema)
+
+    # Define dependencies
+    soda_validate_staging >> soda_validate_core
